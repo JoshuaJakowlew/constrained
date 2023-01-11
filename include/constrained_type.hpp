@@ -121,7 +121,7 @@ namespace ct
         [[nodiscard]] constexpr auto operator*() const && noexcept -> const T&&
         { return std::move(_value); }
 
-        // Member acces operators
+        // Member access operators
 
         [[nodiscard]] constexpr decltype(auto) operator->() const & noexcept(nothrow_member_accessible<T>)
             requires member_accessible<T>
