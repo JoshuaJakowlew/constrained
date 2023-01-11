@@ -36,6 +36,28 @@ namespace ct
         predicate<F, T>
         and std::is_nothrow_invocable_v<F, T const &>;
 
+    template <typename From, typename To>
+    concept convertible_to = requires
+    {
+        static_cast<To>(std::declval<From>());
+    };
+
+    template <typename T>
+    concept dereferenceable = requires (T x) { *x; };
+
+    template <typename T>
+    concept nothrow_dereferenceable =
+        dereferenceable<T>
+        and noexcept(*std::declval<T>());
+
+    template <typename T>
+    concept member_accessible = requires (T x) { x.operator->(); };
+
+    template <typename T>
+    concept nothrow_member_accessible = 
+        member_accessible<T>
+        and noexcept(std::declval<T>().operator->());
+
     template <typename T, auto... Constraints>
         requires (predicate<decltype(Constraints), T const &> && ...)
     class constrained_type
@@ -47,9 +69,7 @@ namespace ct
         )
             requires std::is_default_constructible_v<T>
             : _value{}
-        {
-            check();
-        }
+        { check(); }
 
         template <typename... Args>
         constexpr constrained_type(Args&&... args) noexcept(
@@ -58,23 +78,72 @@ namespace ct
         )
             requires std::is_constructible_v<T, Args...>
             : _value{std::forward<Args>(args)...}
-        {
-            check();
-        }
+        { check(); }
 
-        constrained_type(constrained_type const &) = delete;
-        constexpr constrained_type(constrained_type && other) noexcept(std::is_nothrow_swappable_v<T>)
-            requires std::is_swappable_v<T>
-        {
-            swap(_value, other._value);
-        }
+        constrained_type(constrained_type const & other) noexcept(std::is_nothrow_copy_constructible_v<T>)
+            requires std::is_copy_constructible_v<T>
+            : _value{other._value}
+        {}
 
-        constexpr operator bool() noexcept(static_cast<bool>(_value))
-            requires nullable<T> and std::convertible_to<T, bool>
+        constexpr constrained_type(constrained_type && other) noexcept(std::is_nothrow_move_constructible_v<T>)
+            requires std::is_move_constructible_v<T>
+            : _value{std::move(other._value)}
+        {}
+
+        [[nodiscard]] constexpr operator bool() const noexcept(
+            noexcept(static_cast<bool>(_value))
+        )
+            requires nullable<T> and convertible_to<T, bool>
         {
             return static_cast<bool>(_value);
         }
-    // private:
+
+        // Dereference operators
+
+        [[nodiscard]] constexpr decltype(auto) operator*() const & noexcept(nothrow_dereferenceable<T>)
+            requires dereferenceable<T>
+        { return *_value; }
+
+        [[nodiscard]] constexpr decltype(auto) operator*() && noexcept(nothrow_dereferenceable<T>)
+            requires dereferenceable<T>
+        { return *std::move(_value); }
+
+        [[nodiscard]] constexpr decltype(auto) operator*() const && noexcept(nothrow_dereferenceable<T>)
+            requires dereferenceable<T>
+        { return *std::move(_value); }
+
+        [[nodiscard]] constexpr auto operator*() const & noexcept -> const T&
+        { return _value; }
+
+        [[nodiscard]] constexpr auto operator*() && noexcept -> T&&
+        { return std::move(_value); }
+
+        [[nodiscard]] constexpr auto operator*() const && noexcept -> const T&&
+        { return std::move(_value); }
+
+        // Member acces operators
+
+        [[nodiscard]] constexpr decltype(auto) operator->() const & noexcept(nothrow_member_accessible<T>)
+            requires member_accessible<T>
+        { return _value.operator->(); }
+
+        [[nodiscard]] constexpr decltype(auto) operator->() && noexcept(nothrow_member_accessible<T>)
+            requires member_accessible<T>
+        { return std::move(_value).operator->(); }
+
+        [[nodiscard]] constexpr decltype(auto) operator->() const && noexcept(nothrow_member_accessible<T>)
+            requires member_accessible<T>
+        { return std::move(_value).operator->(); }
+
+        [[nodiscard]] constexpr auto operator->() const & noexcept -> const T*
+        { return &_value; }
+
+        [[nodiscard]] constexpr auto operator->() && noexcept -> T*
+        { return &_value; }
+
+        [[nodiscard]] constexpr auto operator->() const && noexcept -> const T*
+        { return &_value; }
+    private:
         T _value;
 
         constexpr void check() noexcept(
@@ -82,6 +151,7 @@ namespace ct
             and noexcept(fail())
         )
         {
+            std::puts("Check");
             bool satisfied = (Constraints(_value) && ...);
             if (!satisfied)
             {
