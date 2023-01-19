@@ -1,8 +1,8 @@
 #include <iostream>
 #include <string>
 #include <algorithm>
+#include <vector>
 
-#include <optional.hpp>
 #include <constrained_type.hpp>
 #include <type_traits>
 
@@ -49,7 +49,7 @@ struct has_runtime_elem_check
     constexpr bool operator()(auto const & x) const
     {
         T c;
-        std::cout << "Enter required character in emai\n> ";
+        std::cout << "Enter required character in email\n> ";
         std::cin >> c;
         return std::end(x) != std::find(std::begin(x), std::end(x), c);
     }
@@ -76,8 +76,30 @@ void email_test()
     std::cout << '\n';
 }
 
+template <>
+struct ct::constrained_traits<int>
+{
+    static constexpr bool is_nullable = true;
+    static constexpr int null = -1;
+};
+
+constexpr auto even_check = [](auto x) { return x % 2 == 0; };
+
+template <typename T>
+using even_t = ct::constrained_type<T, even_check>;
+
+void even_test()
+{
+    even_t<int> x{1};
+    std::cout << *x << '\n';
+
+    try { even_t<unsigned> y{1u}; }
+    catch (...) { std::cout << "Ooops\n"; }
+}
+
 int main()
 {
     non_null_test();
     email_test();
+    even_test();
 }
