@@ -29,12 +29,9 @@ namespace ct
         and noexcept(T{constrained_traits<T>::null});
 
     template <typename F, typename T>
-    concept predicate = std::predicate<F, T const &>;
-
-    template <typename F, typename T>
     concept nothrow_predicate = 
-        predicate<F, T>
-        and std::is_nothrow_invocable_v<F, T const &>;
+        std::predicate<F, T>
+        and std::is_nothrow_invocable_v<F, T>;
 
     template <typename From, typename To>
     concept convertible_to = requires
@@ -59,10 +56,11 @@ namespace ct
         and noexcept(std::declval<T>().operator->());
 
     template <typename T, auto... Constraints>
-        requires (predicate<decltype(Constraints), T const &> && ...)
+        requires (std::predicate<decltype(Constraints), T const &> && ...)
     class constrained_type
     {
     public:
+#pragma region constructors
         constexpr constrained_type() noexcept(
             std::is_nothrow_default_constructible_v<T>
             and noexcept(check())
@@ -89,6 +87,23 @@ namespace ct
             requires std::is_move_constructible_v<T>
             : _value{std::move(other._value)}
         {}
+#pragma endregion constructors
+
+#pragma region assignments
+        constexpr auto operator=(constrained_type const & other) noexcept(std::is_nothrow_copy_constructible_v<T>) -> constrained_type &
+            requires std::is_copy_constructible_v<T>
+        {
+            _value = other._value;
+            return *this;
+        }
+
+        constexpr auto operator=(constrained_type && other) noexcept(std::is_nothrow_move_constructible_v<T>)
+            requires std::is_move_constructible_v<T>
+        {
+            _value = std::move(other._value);
+            return *this;
+        }
+#pragma endregion
 
         [[nodiscard]] constexpr operator bool() const noexcept(
             noexcept(static_cast<bool>(_value))
@@ -98,8 +113,7 @@ namespace ct
             return static_cast<bool>(_value);
         }
 
-        // Dereference operators
-
+#pragma region dereference_operators
         [[nodiscard]] constexpr decltype(auto) operator*() const & noexcept(nothrow_dereferenceable<T>)
             requires dereferenceable<T>
         { return *_value; }
@@ -120,9 +134,10 @@ namespace ct
 
         [[nodiscard]] constexpr auto operator*() const && noexcept -> const T&&
         { return std::move(_value); }
+#pragma endregion dereference_operators
 
-        // Member access operators
-
+#pragma region access_operators
+        // Member accessible overloads
         [[nodiscard]] constexpr decltype(auto) operator->() const & noexcept(nothrow_member_accessible<T>)
             requires member_accessible<T>
         { return _value.operator->(); }
@@ -135,6 +150,20 @@ namespace ct
             requires member_accessible<T>
         { return std::move(_value).operator->(); }
 
+        // Pointer overloads
+        [[nodiscard]] constexpr decltype(auto) operator->() const & noexcept
+            requires std::is_pointer_v<T>
+        { return _value; }
+
+        [[nodiscard]] constexpr decltype(auto) operator->() && noexcept
+            requires std::is_pointer_v<T>
+        { return std::move(_value); }
+
+        [[nodiscard]] constexpr decltype(auto) operator->() const && noexcept
+            requires std::is_pointer_v<T>
+        { return std::move(_value); }
+
+        // Fallback overloads
         [[nodiscard]] constexpr auto operator->() const & noexcept -> const T*
         { return &_value; }
 
@@ -143,15 +172,18 @@ namespace ct
 
         [[nodiscard]] constexpr auto operator->() const && noexcept -> const T*
         { return &_value; }
+#pragma endregion access_operators
+    
+    
+    
     private:
         T _value;
 
         constexpr void check() noexcept(
-            (nothrow_predicate<decltype(Constraints), T> && ...)
+            (nothrow_predicate<decltype(Constraints), T const &> && ...)
             and noexcept(fail())
         )
         {
-            std::puts("Check");
             bool satisfied = (Constraints(_value) && ...);
             if (!satisfied)
             {
