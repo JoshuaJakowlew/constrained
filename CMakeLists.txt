@@ -5,14 +5,15 @@ project(constrained_type
     LANGUAGES CXX
 )
 
-# add_library(${PROJECT_NAME} INTERFACE)
-
-add_executable(${PROJECT_NAME} main.cpp)
+add_library(${PROJECT_NAME} INTERFACE)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    CXX_STANDARD 20
+    CXX_STANDARD          20
+    CXX_STANDARD_REQUIRED TRUE
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC
-    ./include
+target_include_directories(${PROJECT_NAME}
+    INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
 )
