@@ -105,7 +105,7 @@ namespace ct
         }
 #pragma endregion
 
-        [[nodiscard]] constexpr operator bool() const noexcept(
+        [[nodiscard]] constexpr explicit operator bool() const noexcept(
             noexcept(static_cast<bool>(_value))
         )
             requires nullable<T> and convertible_to<T, bool>
