@@ -7,26 +7,35 @@
 
 namespace ct
 {
+    template <typename Lambda, int = (Lambda{}(), 0)>
+    constexpr bool is_constexpr(Lambda) { return true;  }
+    constexpr bool is_constexpr(...)    { return false; }
+
     template <typename T>
-    struct constrained_traits
+    concept constrained_trait = requires()
     {
-        static constexpr bool is_nullable = false;
+        typename T::value_type;
+
+        requires std::same_as<decltype(T::is_nullable), const bool>;
+        requires is_constexpr([]{ T::is_nullable; });
+
+        // If T::is_nullable is false - OK, no additional checks
+        // Otherwise apply requirements for T::null
+        requires (not T::is_nullable ? true : requires {
+            requires std::same_as<decltype(T::null), const typename T::value_type>;
+            requires is_constexpr([]{ T::null; });
+        });
     };
 
-    template <typename T>
-    struct constrained_traits<std::optional<T>>
-    {
-        static constexpr bool is_nullable = true;
-        static constexpr std::optional<T> null = std::nullopt;
-    };
+    template <typename Trait>
+    concept nullable = 
+        constrained_trait<Trait>
+        and Trait::is_nullable;
 
-    template <typename T>
-    concept nullable = constrained_traits<T>::is_nullable;
-
-    template <typename T>
+    template <typename Trait>
     concept nothrow_null_constructible = 
-        nullable<T>
-        and noexcept(T{constrained_traits<T>::null});
+        nullable<Trait>
+        and noexcept(typename Trait::value_type{Trait::null});
 
     template <typename F, typename T>
     concept nothrow_predicate = 
@@ -55,13 +64,29 @@ namespace ct
         member_accessible<T>
         and noexcept(std::declval<T>().operator->());
 
-    template <typename T, auto... Constraints>
+    template <typename T>
+    struct constrained_traits
+    {
+        using value_type = T;
+        static constexpr bool is_nullable = false;
+    };
+
+    template <typename T>
+    struct constrained_traits<std::optional<T>>
+    {
+        using value_type = std::optional<T>;
+        static constexpr bool is_nullable = true;
+        static constexpr std::optional<T> null = std::nullopt;
+    };
+
+    template <typename T, constrained_trait Trait, auto... Constraints>
         requires (std::predicate<decltype(Constraints), T const &> && ...)
-    class constrained_type
+            and std::same_as<T, typename Trait::value_type>
+    class basic_constrained_type
     {
     public:
 #pragma region constructors
-        constexpr constrained_type() noexcept(
+        constexpr basic_constrained_type() noexcept(
             std::is_nothrow_default_constructible_v<T>
             and noexcept(check())
         )
@@ -70,7 +95,7 @@ namespace ct
         { check(); }
 
         template <typename... Args>
-        constexpr constrained_type(Args&&... args) noexcept(
+        constexpr basic_constrained_type(Args&&... args) noexcept(
             std::is_nothrow_constructible_v<T, Args...>
             and noexcept(check())
         )
@@ -78,26 +103,26 @@ namespace ct
             : _value{std::forward<Args>(args)...}
         { check(); }
 
-        constrained_type(constrained_type const & other) noexcept(std::is_nothrow_copy_constructible_v<T>)
+        basic_constrained_type(basic_constrained_type const & other) noexcept(std::is_nothrow_copy_constructible_v<T>)
             requires std::is_copy_constructible_v<T>
             : _value{other._value}
         {}
 
-        constexpr constrained_type(constrained_type && other) noexcept(std::is_nothrow_move_constructible_v<T>)
+        constexpr basic_constrained_type(basic_constrained_type && other) noexcept(std::is_nothrow_move_constructible_v<T>)
             requires std::is_move_constructible_v<T>
             : _value{std::move(other._value)}
         {}
 #pragma endregion constructors
 
 #pragma region assignments
-        constexpr auto operator=(constrained_type const & other) noexcept(std::is_nothrow_copy_constructible_v<T>) -> constrained_type &
+        constexpr auto operator=(basic_constrained_type const & other) noexcept(std::is_nothrow_copy_constructible_v<T>) -> basic_constrained_type &
             requires std::is_copy_constructible_v<T>
         {
             _value = other._value;
             return *this;
         }
 
-        constexpr auto operator=(constrained_type && other) noexcept(std::is_nothrow_move_constructible_v<T>)
+        constexpr auto operator=(basic_constrained_type && other) noexcept(std::is_nothrow_move_constructible_v<T>)
             requires std::is_move_constructible_v<T>
         {
             _value = std::move(other._value);
@@ -108,7 +133,7 @@ namespace ct
         [[nodiscard]] constexpr explicit operator bool() const noexcept(
             noexcept(static_cast<bool>(_value))
         )
-            requires nullable<T> and convertible_to<T, bool>
+            requires nullable<Trait> and convertible_to<T, bool>
         {
             return static_cast<bool>(_value);
         }
@@ -174,8 +199,6 @@ namespace ct
         { return &_value; }
 #pragma endregion access_operators
     
-    
-    
     private:
         T _value;
 
@@ -191,16 +214,19 @@ namespace ct
             }
         }
 
-        constexpr void fail() noexcept(nothrow_null_constructible<T>)
-            requires nullable<T>
+        constexpr void fail() noexcept(nothrow_null_constructible<Trait>)
+            requires nullable<Trait>
         {
-            _value = constrained_traits<T>::null;
+            _value = Trait::null;
         }
 
         [[noreturn]] constexpr void fail() const
-            requires (not nullable<T>)
+            requires (not nullable<Trait>)
         {
             throw std::runtime_error{"Constraints not satisfied"};
         }
     };
+
+    template <typename T, auto... Constraints>
+    using constrained_type = basic_constrained_type<T, constrained_traits<T>, Constraints...>;
 } // namespace ct
