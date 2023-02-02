@@ -76,7 +76,7 @@ namespace ct
     {
         using value_type = std::optional<T>;
         static constexpr bool is_nullable = true;
-        static constexpr std::optional<T> null = std::nullopt;
+        static constexpr value_type null = std::nullopt;
     };
 
     template <typename T, constrained_trait Trait, auto... Constraints>
