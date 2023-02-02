@@ -65,14 +65,14 @@ namespace ct
         and noexcept(std::declval<T>().operator->());
 
     template <typename T>
-    struct constrained_traits
+    struct default_traits
     {
         using value_type = T;
         static constexpr bool is_nullable = false;
     };
 
     template <typename T>
-    struct constrained_traits<std::optional<T>>
+    struct default_traits<std::optional<T>>
     {
         using value_type = std::optional<T>;
         static constexpr bool is_nullable = true;
@@ -228,5 +228,5 @@ namespace ct
     };
 
     template <typename T, auto... Constraints>
-    using constrained_type = basic_constrained_type<T, constrained_traits<T>, Constraints...>;
+    using constrained_type = basic_constrained_type<T, default_traits<T>, Constraints...>;
 } // namespace ct
