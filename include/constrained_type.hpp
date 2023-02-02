@@ -79,7 +79,16 @@ namespace ct
         static constexpr value_type null = std::nullopt;
     };
 
-    template <typename T, constrained_trait Trait, auto... Constraints>
+    struct configuration_point
+    {
+        bool explicit_bool = true;
+        bool explicit_forwarding_constructor = true;
+        bool opaque_dereferencable = true;
+        bool opaque_member_accessible = true;
+        bool opaque_pointer_accessible = true;
+    };
+
+    template <typename T, constrained_trait Trait, configuration_point Config, auto... Constraints>
         requires (std::predicate<decltype(Constraints), T const &> && ...)
             and std::same_as<T, typename Trait::value_type>
     class basic_constrained_type
@@ -95,7 +104,7 @@ namespace ct
         { check(); }
 
         template <typename... Args>
-        constexpr basic_constrained_type(Args&&... args) noexcept(
+        constexpr explicit(Config.explicit_forwarding_constructor) basic_constrained_type(Args&&... args) noexcept(
             std::is_nothrow_constructible_v<T, Args...>
             and noexcept(check())
         )
@@ -130,25 +139,25 @@ namespace ct
         }
 #pragma endregion
 
-        [[nodiscard]] constexpr explicit operator bool() const noexcept(
-            noexcept(static_cast<bool>(_value))
+        [[nodiscard]] constexpr explicit(Config.explicit_bool) operator bool() const noexcept(
+            noexcept(static_cast<bool>(_value == Trait::null))
         )
-            requires nullable<Trait> and convertible_to<T, bool>
+            requires nullable<Trait>
         {
-            return static_cast<bool>(_value);
+            return static_cast<bool>(_value == Trait::null);
         }
 
 #pragma region dereference_operators
         [[nodiscard]] constexpr decltype(auto) operator*() const & noexcept(nothrow_dereferenceable<T>)
-            requires dereferenceable<T>
+            requires dereferenceable<T> and (Config.opaque_dereferencable)
         { return *_value; }
 
         [[nodiscard]] constexpr decltype(auto) operator*() && noexcept(nothrow_dereferenceable<T>)
-            requires dereferenceable<T>
+            requires dereferenceable<T> and (Config.opaque_dereferencable)
         { return *std::move(_value); }
 
         [[nodiscard]] constexpr decltype(auto) operator*() const && noexcept(nothrow_dereferenceable<T>)
-            requires dereferenceable<T>
+            requires dereferenceable<T> and (Config.opaque_dereferencable)
         { return *std::move(_value); }
 
         [[nodiscard]] constexpr auto operator*() const & noexcept -> const T&
@@ -164,28 +173,28 @@ namespace ct
 #pragma region access_operators
         // Member accessible overloads
         [[nodiscard]] constexpr decltype(auto) operator->() const & noexcept(nothrow_member_accessible<T>)
-            requires member_accessible<T>
+            requires member_accessible<T> and (Config.opaque_member_accessible)
         { return _value.operator->(); }
 
         [[nodiscard]] constexpr decltype(auto) operator->() && noexcept(nothrow_member_accessible<T>)
-            requires member_accessible<T>
+            requires member_accessible<T> and (Config.opaque_member_accessible)
         { return std::move(_value).operator->(); }
 
         [[nodiscard]] constexpr decltype(auto) operator->() const && noexcept(nothrow_member_accessible<T>)
-            requires member_accessible<T>
+            requires member_accessible<T> and (Config.opaque_member_accessible)
         { return std::move(_value).operator->(); }
 
         // Pointer overloads
         [[nodiscard]] constexpr decltype(auto) operator->() const & noexcept
-            requires std::is_pointer_v<T>
+            requires std::is_pointer_v<T> and (Config.opaque_pointer_accessible)
         { return _value; }
 
         [[nodiscard]] constexpr decltype(auto) operator->() && noexcept
-            requires std::is_pointer_v<T>
+            requires std::is_pointer_v<T> and (Config.opaque_pointer_accessible)
         { return std::move(_value); }
 
         [[nodiscard]] constexpr decltype(auto) operator->() const && noexcept
-            requires std::is_pointer_v<T>
+            requires std::is_pointer_v<T> and (Config.opaque_pointer_accessible)
         { return std::move(_value); }
 
         // Fallback overloads
@@ -228,5 +237,5 @@ namespace ct
     };
 
     template <typename T, auto... Constraints>
-    using constrained_type = basic_constrained_type<T, default_traits<T>, Constraints...>;
+    using constrained_type = basic_constrained_type<T, default_traits<T>, {}, Constraints...>;
 } // namespace ct
