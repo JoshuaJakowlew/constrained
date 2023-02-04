@@ -1,10 +1,9 @@
 #pragma once
 
 #include <concepts>
-#include <string>
+#include <type_traits>
 
 #include <constrained_type/constrained_type.hpp>
-#include <type_traits>
 
 #pragma region by_value
 #define CONSTRAINED_TYPE_RELATIONAL_BY_VALUE(name, op) \
@@ -78,9 +77,9 @@ namespace ct
 {
     CONSTRAINED_TYPE_RELATION_BY_VALUE();
 
-    CONSTRAINED_TYPE_RELATION_BY_METHOD(size);
-    CONSTRAINED_TYPE_RELATION_BY_METHOD(length);
+    CONSTRAINED_TYPE_RELATION_BY_METHOD(size    );
+    CONSTRAINED_TYPE_RELATION_BY_METHOD(length  );
     CONSTRAINED_TYPE_RELATION_BY_METHOD(capacity);
-    CONSTRAINED_TYPE_RELATION_BY_METHOD(front);
-    CONSTRAINED_TYPE_RELATION_BY_METHOD(back);
+    CONSTRAINED_TYPE_RELATION_BY_METHOD(front   );
+    CONSTRAINED_TYPE_RELATION_BY_METHOD(back    );
 } //namespace ct
