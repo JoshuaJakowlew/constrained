@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <concepts>
 #include <optional>
+#include <functional>
 
 namespace ct
 {
@@ -216,7 +217,7 @@ namespace ct
             and noexcept(fail())
         )
         {
-            bool satisfied = (Constraints(_value) && ...);
+            bool satisfied = (std::invoke(Constraints, _value) && ...);
             if (!satisfied)
             {
                 fail();
