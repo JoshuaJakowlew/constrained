@@ -4,6 +4,9 @@
 #include <type_traits>
 #include <concepts>
 #include <optional>
+#include <functional>
+
+#include <constrained_type/value_pack.hpp>
 
 namespace ct
 {
@@ -91,9 +94,94 @@ namespace ct
     template <typename T, constrained_trait Trait, configuration_point Config, auto... Constraints>
         requires (std::predicate<decltype(Constraints), T const &> && ...)
             and std::same_as<T, typename Trait::value_type>
+    class basic_constrained_type;
+    
+    namespace detail
+    {
+        template <typename T, constrained_trait Trait, configuration_point Config, auto... Constraints>
+        consteval auto is_constrained(
+            basic_constrained_type<T, Trait, Config, Constraints...>*
+        ) -> std::true_type;
+
+        consteval auto is_constrained(auto*) -> std::false_type;
+    }
+
+    template <typename T>
+    concept constrained = std::same_as<
+        decltype(detail::is_constrained(static_cast<T*>(nullptr))),
+        std::true_type
+    >;
+
+    namespace detail
+    {
+        template <constrained ConstrainedType, auto... Constraints>
+        consteval auto set_constraint_pack(
+            value_pack<Constraints...>*
+        ) -> basic_constrained_type<
+            typename ConstrainedType::value_type,
+            typename ConstrainedType::trait_type,
+            ConstrainedType::config_value,
+            Constraints...
+        >;
+    }
+
+    template <constrained ConstrainedType, typename ConstraintPack>
+    using set_constraint_pack = decltype(
+        detail::set_constraint_pack<ConstrainedType>(
+            static_cast<ConstraintPack*>(nullptr)
+        )
+    );
+
+    template <constrained ConstrainedType, auto... Constraints>
+    using set_constraints = set_constraint_pack<ConstrainedType, value_pack<Constraints...>>;
+
+    template <constrained ConstrainedType, typename ConstraintPack>
+    using add_constraint_pack = decltype(
+        detail::set_constraint_pack<ConstrainedType>(
+            static_cast<
+                typename ConstrainedType::constraint_pack::template add_pack<ConstraintPack>*
+            >(nullptr)
+        )
+    );
+
+    template <constrained ConstrainedType, auto... Constraints>
+    using add_constraints = add_constraint_pack<ConstrainedType, value_pack<Constraints...>>;
+
+    template <constrained ConstrainedType>
+    using clear_constraints = basic_constrained_type<
+        typename ConstrainedType::value_type,
+        typename ConstrainedType::trait_type,
+        ConstrainedType::config_value
+    >;
+
+    template <typename T, constrained_trait Trait, configuration_point Config, auto... Constraints>
+        requires (std::predicate<decltype(Constraints), T const &> && ...)
+            and std::same_as<T, typename Trait::value_type>
     class basic_constrained_type
     {
     public:
+#pragma region type_manipulations
+        using value_type = T;
+        using trait_type = Trait;
+        static constexpr auto config_value = Config;
+        using constraint_pack = value_pack<Constraints...>;
+        using self_type = basic_constrained_type<T, Trait, Config, Constraints...>;
+
+        template <typename ConstraintPack>
+        using set_constraint_pack = ct::set_constraint_pack<self_type, ConstraintPack>;
+
+        template <auto... NewConstraints>
+        using set_constraints = ct::set_constraints<self_type, NewConstraints...>;
+
+        template <typename ConstraintPack>
+        using add_constraint_pack = ct::add_constraint_pack<self_type, ConstraintPack>;
+
+        template <auto... AdditionalConstraints>
+        using add_constraints = ct::add_constraints<self_type, AdditionalConstraints...>;
+
+        using clear_constraints = ct::clear_constraints<self_type>;
+#pragma endregion type_manipulations
+
 #pragma region constructors
         constexpr basic_constrained_type() noexcept(
             std::is_nothrow_default_constructible_v<T>
@@ -216,7 +304,7 @@ namespace ct
             and noexcept(fail())
         )
         {
-            bool satisfied = (Constraints(_value) && ...);
+            bool satisfied = (std::invoke(Constraints, _value) && ...);
             if (!satisfied)
             {
                 fail();
@@ -237,5 +325,5 @@ namespace ct
     };
 
     template <typename T, auto... Constraints>
-    using constrained_type = basic_constrained_type<T, default_traits<T>, {}, Constraints...>;
+    using constrained_type = basic_constrained_type<T, default_traits<T>, configuration_point{}, Constraints...>;
 } // namespace ct
