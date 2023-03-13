@@ -49,20 +49,25 @@ namespace ct
         && callable_with<ValF, Xs...>
         && combinator<decltype(ValF::value)>;
 
-    /*
-     * Helper type that allows unlifting of V
-     */
-    template <auto V>
-    struct [[nodiscard]] val final
+    namespace detail
     {
-        using combinator_tag = void;
-        using unlifting_tag = void;
+        /*
+        * Helper type that allows unlifting of V
+        */
+        template <auto V>
+        struct [[nodiscard]] val final
+        {
+            using combinator_tag = void;
+            using unlifting_tag = void;
 
-        static constexpr auto value = V;
+            static constexpr auto value = V;
 
-        [[nodiscard]] constexpr auto operator()(auto const & x) const noexcept
-        { return value; }
-    };
+            [[nodiscard]] constexpr auto operator()(auto const & x) const noexcept
+            { return value; }
+        };
+    }
+    template <auto V> \
+    inline constexpr auto val = detail::val<V>{};
 
     /*
      * Unifies usage of different value categories passed as non-type template parameter
@@ -103,15 +108,15 @@ namespace ct
             requires combinator<decltype(V)>
         {
             std::cout << "Combinator\n";
-            return val<V>{};
+            return val<V>;
         }
 
         // Specialization for callable with x objects
         static constexpr auto get(auto const & x) noexcept
-            requires callable_with<val<V>, decltype(x)> && (!combinator<decltype(V)>)
+            requires callable_with<detail::val<V>, decltype(x)> && (!combinator<decltype(V)>)
         {
             std::cout << "Semi-combinator\n";
-            return val<V>{};
+            return val<V>;
         }
 
         // Specialization for wrapped runtime values
@@ -121,14 +126,16 @@ namespace ct
             std::cout << "Callable\n";
             return val<
                 [] [[nodiscard]] (const auto &) noexcept(noexcept(V())) { return V(); }
-            >{};
+            >;
         }
 
         // Specialization for everything else (e.g. simple values)
         static constexpr auto get(auto const & x) noexcept
         {
             std::cout << "Value\n";
-            return val<[] [[nodiscard]] (const auto & x) noexcept { return V; }>{};
+            return val<
+                [] [[nodiscard]] (const auto & x) noexcept { return V; }
+            >;
         }
 
         // Extracts callable from type level
