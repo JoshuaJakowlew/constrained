@@ -139,7 +139,7 @@ namespace ct
     using add_constraint_pack = decltype(
         detail::set_constraint_pack<ConstrainedType>(
             static_cast<
-                typename ConstrainedType::constraints_pack::template add_pack<ConstraintPack>*
+                typename ConstrainedType::constraint_pack::template add_pack<ConstraintPack>*
             >(nullptr)
         )
     );
@@ -164,7 +164,7 @@ namespace ct
         using value_type = T;
         using trait_type = Trait;
         static constexpr auto config_value = Config;
-        using constraints_pack = value_pack<Constraints...>;
+        using constraint_pack = value_pack<Constraints...>;
         using self_type = basic_constrained_type<T, Trait, Config, Constraints...>;
 
         template <typename ConstraintPack>
