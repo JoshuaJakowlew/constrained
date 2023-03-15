@@ -3,7 +3,118 @@
 This is a small utility library that helps **expressing code invariants in types**. Constrained provides `constrained_type` class, parametrized by the type of holding value and set of predicates, applied to it at creation.
 In other words, you can associate conditions with a value at the type level. Сonditions are checked when the object is created, and if they are not met, an error occurs (an exception, or a special null value provided by the user).
 Constrained types can be used, for example, to validate function parameters, to more strictly limit type values (e.g., limit the value range of int type, which stores a person's age, or limit the string length for a password), and to express various invariants in general.
+## Fast tutorial for the impatient
 
+### Fast example
+Imagine, you have some code with invariants, that you must check unconditionally. For example, you have a function like this:
+```c++
+template <typename T>
+T deref(T* ptr)
+{
+    return *ptr;
+}
+```
+This function has its invariant - `ptr` must not be `nullptr`. You can manually check it like this:
+```c++
+template <typename T>
+T deref(T* ptr)
+{
+    if (!ptr)
+        throw std::runtime_exception{"ptr is null"};
+    return *ptr;
+}
+```
+That's OK, but you don't encode this invariant anywhere in function signature. User must remember, which values must be passed to the function. Also, you can forget to manually check required invariants.
+
+With `constrained_type` you can write like this:
+```c++
+constexpr auto non_null_check = [](auto * ptr) { return ptr != nullptr; };
+
+template <typename T>
+using non_null = ct::constrained_type<T*, non_null_check>;
+
+template <typename T>
+auto deref(non_null<T> ptr)
+{
+    return *ptr;
+}
+
+...
+
+int x;
+non_null<int> ptr{&x}; // Exception if &x is null
+std::cout << deref(ptr) << '\n';
+```
+This time we encoded invariant in our type system. Now we know, which invariants we should observe as a user of this function. Also, we don't forget to write checks by hand.
+
+Our `not_null` type holds `non_null_check` in type (using non-type template parameters). So, it doesn't affect its size and has no overhead.
+### Basic API reference
+`constrained_type` is declared as the following code and parametrized by:
+- `T` - type of holding value.
+- `Constraints` - predicates. These are non-type parameters, so they hold values, not types.
+```c++
+template <typename T, auto... Constraints>
+using constrained_type = /* Complicated stuff */
+```
+You should declare predicates (you can write them directly at the type declaration).
+```c++
+constexpr auto age_check = [](int x) { return x > 0 && x < 150; };
+```
+Then build your constrained type and use it.
+```c++
+using age_t = ct::constrained_type<int, age_check>;
+age_t good_age{42};
+```
+Checks are performed only once - at creation time. So, there is no way to modify holding object. You may either take a const reference, or move it from constrained_type.
+Value can be accessed by dereference operator, or by operator -> (e. g. for member access or method calls).
+```c++
+int copy = *good_age;
+int move = *std::move(good_age);
+
+age_t bad_age{-42}; // throws
+```
+When checks fails - constrained_type is in failed state. By default this leads to exception. But there is overload for `std::optional<T>` which doesn't throw. Then constrained_type becomes nullable. When constrained type is nullable, it doesn't throw when checks fail, and provides operator bool for validity checks. Nullability is controlled by trait objects and can be customized by user (look at **Nullability Traits** section).
+```c++
+template <>
+struct ct::default_traits<int>
+{
+    using value_type = int;
+    static constexpr bool is_nullable = true;
+    static constexpr int null = -1;
+};
+
+nullable_age_t bad_age{-42}; // doesn't throw, holding type is in "null" state
+static_cast<bool>(bad_age); // false
+```
+Writing constraints is cool, but boring. Constrained provides you pre-defined combinators for easier constraint writing. Let's build somewhat synthetic, but more interesting example:
+```c++
+using email_t = constrained_type<std::string,
+    gt<&std::string::length, 10>, // Remember, we can pass different callables, not only lambdas
+    lt<&std::string::length, 20> // Multiple constraints applied in order
+>;
+
+constexpr auto is_even = [](int x) { return x % 2 == 0; };
+constexpr auto divisible_by_5 = [](int x) { return x % 5 == 0; };
+using cool_int = constrained_type<int,
+	gt<0>, lt<42>, // 0 < x < 42
+	or_<is_even, divisible_by_five> // is_even(x) || divisible_by_five(x)
+>;
+```
+You can manipulate constraint sets with template magic. Let's see, how we can add constraints to given constrained type:
+```c++
+// From previous samples
+constexpr auto age_check = [](int x) { return x > 0 && x < 150; };
+using age_t = ct::constrained_type<int, age_check>;
+
+// Add new check
+constexpr auto legal_age_check = [](int x) { return x > 18; };
+using legal_age_t = age_t
+    ::add_constraints<legal_age_check>; // Create new type with added constraint
+
+auto child = legal_age_t{10}; // Fails
+auto oldman = legal_age_t{60}; // OK
+auto deadman = legal_age_t{666}; // Fails
+```
 ## Constrained type API
 
 Linrary provides two ways of using constrained types: a simple but somewhat limited approach and more difficult and powerful one:
