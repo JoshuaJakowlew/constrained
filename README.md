@@ -323,6 +323,12 @@ Acts like n-ary function of **Args**.
 gt<c1, ..., cn>(x) <=> c1(x) > ... > cn(x)
 ```
 
+#### C++ operators for operator combinators
+Library defines C++ operators for operator combinators. Note, that combinatos must be **constant expressions** to be used in that way.
+```c++
+gt<10> && lt<100> <=> and_<gt<10>, lt<100>>
+```
+
 #### List of defined operator combinators
 
 ```
@@ -347,6 +353,9 @@ Acts like partially right-applied binary function with (e. g. `(< 2)`).
 ```c++
 not_<c>(x) <=> !c(x)
 ```
+#### C++ operators
+C++ operators defined for unary combinator operators much like for binary operators.
+
 #### List of defined operator combinators
 
 ```c++
