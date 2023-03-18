@@ -9,6 +9,12 @@
     template <auto... Args> \
     inline constexpr auto name = detail::name<Args...>{};
 
+#define CONSTRAINED_TYPE_BINARY_OPERATOR(name, op) \
+    [[nodiscard]] consteval auto operator op (combinator auto x, combinator auto y) noexcept \
+    { \
+        return name<x, y>; \
+    }
+
 #define CONSTRAINED_TYPE_BINARY_OPERATOR_COMBINATOR(name, op) \
     namespace detail \
     { \
@@ -31,7 +37,14 @@
             { return x op apply<A>(x); } \
         }; \
     } \
-    CONSTRAINED_TYPE_TEMPLATED_COMBINATOR_CONSTANT(name)
+    CONSTRAINED_TYPE_TEMPLATED_COMBINATOR_CONSTANT(name) \
+    CONSTRAINED_TYPE_BINARY_OPERATOR(name, op)
+
+#define CONSTRAINED_TYPE_UNARY_OPERATOR(name, op) \
+    [[nodiscard]] consteval auto operator op (combinator auto x) noexcept \
+    { \
+        return name<x>; \
+    }
 
 #define CONSTRAINED_TYPE_UNARY_OPERATOR_COMBINATOR(name, op) \
     namespace detail \
@@ -46,7 +59,8 @@
             { return op apply<A>(x); } \
         }; \
     } \
-    CONSTRAINED_TYPE_TEMPLATED_COMBINATOR_CONSTANT(name)
+    CONSTRAINED_TYPE_TEMPLATED_COMBINATOR_CONSTANT(name) \
+    CONSTRAINED_TYPE_UNARY_OPERATOR(name, op)
 
 namespace ct
 {
@@ -58,11 +72,6 @@ namespace ct
     CONSTRAINED_TYPE_BINARY_OPERATOR_COMBINATOR(le,  <=);
 
     CONSTRAINED_TYPE_UNARY_OPERATOR_COMBINATOR (not_,   !);
-    [[nodiscard]] consteval auto operator!(combinator auto expr) noexcept
-    {
-        return not_<expr>;
-    }
-
     CONSTRAINED_TYPE_BINARY_OPERATOR_COMBINATOR(and_,  &&);
     CONSTRAINED_TYPE_BINARY_OPERATOR_COMBINATOR(or_,   ||);
 
