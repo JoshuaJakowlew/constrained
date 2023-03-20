@@ -11,7 +11,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(nanobench)
 
 add_executable(benchmark
-    # ${CMAKE_CURRENT_SOURCE_DIR}/src
     ./main.cpp
 )
 
@@ -30,6 +29,3 @@ target_link_libraries(benchmark
     constrained_type
     nanobench
 )
-
-# set(CMAKE_CXX_FLAGS "-Wall -Wextra")
-# set(CMAKE_CXX_FLAGS_RELEASE "-O3 -flto -march=native")
