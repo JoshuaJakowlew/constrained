@@ -228,11 +228,11 @@ namespace ct
 #pragma endregion
 
         [[nodiscard]] constexpr explicit(Config.explicit_bool) operator bool() const noexcept(
-            noexcept(static_cast<bool>(_value == Trait::null))
+            noexcept(static_cast<bool>(_value != Trait::null))
         )
             requires nullable<Trait>
         {
-            return static_cast<bool>(_value == Trait::null);
+            return static_cast<bool>(_value != Trait::null);
         }
 
 #pragma region dereference_operators
@@ -317,10 +317,10 @@ namespace ct
             _value = Trait::null;
         }
 
-        [[noreturn]] constexpr void fail() const
+        [[noreturn]] [[gnu::always_inline]] constexpr void fail() const
             requires (not nullable<Trait>)
         {
-            throw std::runtime_error{"Constraints not satisfied"};
+            throw std::logic_error{"Constraints not satisfied"};
         }
     };
 

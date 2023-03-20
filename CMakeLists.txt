@@ -5,6 +5,8 @@ project(constrained_type
     LANGUAGES CXX
 )
 
+option(BUILD_BENCHMARK "Build benchmark" TRUE)
+
 add_library(${PROJECT_NAME} INTERFACE)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -17,3 +19,7 @@ target_include_directories(${PROJECT_NAME}
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
 )
+
+if (${BUILD_BENCHMARK})
+    add_subdirectory("benchmark")
+endif()

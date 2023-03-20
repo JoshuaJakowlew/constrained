@@ -51,14 +51,14 @@ namespace ct
         template <typename Pack, std::size_t I, std::size_t... Is>
         struct seq
         {
-            using pack = Pack::template add_pack<get<I>>;
-            using type = seq<pack, Is...>::type;
+            using pack = typename Pack::template add_pack<get<I>>;
+            using type = typename seq<pack, Is...>::type;
         };
 
         template <typename Pack, std::size_t I>
         struct seq<Pack, I>
         {
-            using type = Pack::template add_pack<get<I>>;
+            using type = typename Pack::template add_pack<get<I>>;
         };
     public:
         /*
