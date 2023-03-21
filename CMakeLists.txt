@@ -6,6 +6,7 @@ project(constrained_type
 )
 
 option(BUILD_BENCHMARK "Build benchmark" TRUE)
+option(BUILD_TEST "Build tests" TRUE)
 
 add_library(${PROJECT_NAME} INTERFACE)
 
@@ -22,4 +23,8 @@ target_include_directories(${PROJECT_NAME}
 
 if (${BUILD_BENCHMARK})
     add_subdirectory("benchmark")
+endif()
+
+if (${BUILD_TEST})
+    add_subdirectory("test")
 endif()
