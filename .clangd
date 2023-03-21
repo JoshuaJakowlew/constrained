@@ -1,0 +1,24 @@
+CompileFlags:
+  Add: [-std=c++2b, -Weverything, -Wno-c++98-compat, -Wno-c++98-compat-pedantic, -Wno-c++20-compat]
+
+Diagnostics:
+  UnusedIncludes: Strict
+  ClangTidy:
+    Add:
+      - cppcoreguidelines*
+      - clang-analyzer*
+      - misc*
+      - modernize*
+      - bugprone*
+      - performance*
+      - readability*
+    Remove:
+      - clang-analyzer-osx*
+      - cppcoreguidelines-avoid-magic-numbers
+      - readability-identifier-length
+      - readability-braces-around-statements
+      - readability-else-after-return
+      - readability-magic-numbers
+      - modernize-use-trailing-return-type
+Hover:
+  ShowAKA: Yes
