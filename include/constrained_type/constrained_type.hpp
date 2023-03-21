@@ -212,14 +212,18 @@ namespace ct
 #pragma endregion constructors
 
 #pragma region assignments
-        constexpr auto operator=(basic_constrained_type const & other) noexcept(std::is_nothrow_copy_constructible_v<T>) -> basic_constrained_type &
+        constexpr auto operator=(basic_constrained_type const & other)
+            noexcept(std::is_nothrow_copy_constructible_v<T>)
+            -> basic_constrained_type &
             requires std::is_copy_constructible_v<T>
         {
             _value = other._value;
             return *this;
         }
 
-        constexpr auto operator=(basic_constrained_type && other) noexcept(std::is_nothrow_move_constructible_v<T>)
+        constexpr auto operator=(basic_constrained_type && other)
+            noexcept(std::is_nothrow_move_constructible_v<T>)
+            -> basic_constrained_type &
             requires std::is_move_constructible_v<T>
         {
             _value = std::move(other._value);
