@@ -166,9 +166,9 @@ struct configuration_point
 {
     bool explicit_bool = true;
     bool explicit_forwarding_constructor = true;
-    bool opaque_dereferencable = true;
-    bool opaque_member_accessible = true;
-    bool opaque_pointer_accessible = true;
+    bool opaque_dereferencable = false;
+    bool opaque_member_accessible = false;
+    bool opaque_pointer_accessible = false;
 };
 ```
 #### Explicit bool
@@ -182,30 +182,30 @@ basic_constrained_type(Args&&... args)
     : _value{std::forward<Args>(args)...}
 {...}
 ```
-#### Opaque dereferencable
+#### Transparent dereferencable
 This switch controls if `operator*` returns just the wrapped value `x` or `*x` if `x` is dereferencable.
 Imagine that we have wrapped `std::optional<std::string>`.
 ```c++
 auto wrapped = wrapped_optional{"42"};
-int x = **wrapped; // if opaque dereferencable flag is off.
-int x = *wrapped; // if opaque dereferencable flag is on.
+int x = **wrapped; // if transparent dereferencable flag is off.
+int x = *wrapped; // if transparent dereferencable flag is on.
 ```
-#### Opaque member accessible
-Works like opaque dereferencable, but for `operator->`.
+#### Transparent member accessible
+Works like transparent dereferencable, but for `operator->`.
 ```c++
 auto wrapped = wrapped_optional{"42"};
 
-size_t x = wrapped->value().size(); // If opaque member accessible is off.
-size_t x = wrapped->size(); // If opaque member accessible is on.
+size_t x = wrapped->value().size(); // If transparent member accessible is off.
+size_t x = wrapped->size(); // If transparent member accessible is on.
 ```
-#### Opaque pointer accessible
-This flag is not as useful as previous one. By default (with all opaque flags off) `operator->` returns `T*` or `&_value` (with const when needed). In generic code this matters, if you call `operator->()` directly. But for pointer types address of pointer is not very useful. Probably we want **value** of this pointer. This flag allows this behaviour.
+#### Transparent pointer accessible
+This flag is not as useful as previous one. By default (with all transparent flags off) `operator->` returns `T*` or `&_value` (with const when needed). In generic code this matters, if you call `operator->()` directly. But for pointer types address of pointer is not very useful. Probably we want **value** of this pointer. This flag allows this behaviour.
 ```c++
 using wrapped_optional = constrained_type<std::string*, ...>;
 auto wrapped = wrapped_optional{new std::string{"42"}};
 
-size_t x = (*wrapped.operator->())->size(); // If opaque pointer accessible is off
-size_t x = wrapped->size(); // If opaque pointer accessible is on
+size_t x = (*wrapped.operator->())->size(); // If transparent pointer accessible is off
+size_t x = wrapped->size(); // If transparent pointer accessible is on
 ```
 ### Constraints
 The last template parameter of `basic_constrained_type` is `auto... Constraints`.
@@ -373,3 +373,7 @@ if (cond(x))
 else
     return false_branch(x);
 ```
+## TODO
+
+- [ ] Add type manipulators for `Conig`
+- [ ] Add type manipulators for `T` (with correct trait checks)

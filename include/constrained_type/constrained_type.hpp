@@ -86,9 +86,9 @@ namespace ct
     {
         bool explicit_bool = true;
         bool explicit_forwarding_constructor = true;
-        bool opaque_dereferencable = true;
-        bool opaque_member_accessible = true;
-        bool opaque_pointer_accessible = true;
+        bool transparent_dereferencable = false;
+        bool transparent_member_accessible = false;
+        bool transparent_pointer_accessible = false;
     };
 
     template <typename T, constrained_trait Trait, configuration_point Config, auto... Constraints>
@@ -241,15 +241,15 @@ namespace ct
 
 #pragma region dereference_operators
         [[nodiscard]] constexpr decltype(auto) operator*() const & noexcept(nothrow_dereferenceable<T>)
-            requires dereferenceable<T> and (Config.opaque_dereferencable)
+            requires dereferenceable<T> and (Config.transparent_dereferencable)
         { return *_value; }
 
         [[nodiscard]] constexpr decltype(auto) operator*() && noexcept(nothrow_dereferenceable<T>)
-            requires dereferenceable<T> and (Config.opaque_dereferencable)
+            requires dereferenceable<T> and (Config.transparent_dereferencable)
         { return *std::move(_value); }
 
         [[nodiscard]] constexpr decltype(auto) operator*() const && noexcept(nothrow_dereferenceable<T>)
-            requires dereferenceable<T> and (Config.opaque_dereferencable)
+            requires dereferenceable<T> and (Config.transparent_dereferencable)
         { return *std::move(_value); }
 
         [[nodiscard]] constexpr auto operator*() const & noexcept -> const T&
@@ -265,28 +265,28 @@ namespace ct
 #pragma region access_operators
         // Member accessible overloads
         [[nodiscard]] constexpr decltype(auto) operator->() const & noexcept(nothrow_member_accessible<T>)
-            requires member_accessible<T> and (Config.opaque_member_accessible)
+            requires member_accessible<T> and (Config.transparent_member_accessible)
         { return _value.operator->(); }
 
         [[nodiscard]] constexpr decltype(auto) operator->() && noexcept(nothrow_member_accessible<T>)
-            requires member_accessible<T> and (Config.opaque_member_accessible)
+            requires member_accessible<T> and (Config.transparent_member_accessible)
         { return std::move(_value).operator->(); }
 
         [[nodiscard]] constexpr decltype(auto) operator->() const && noexcept(nothrow_member_accessible<T>)
-            requires member_accessible<T> and (Config.opaque_member_accessible)
+            requires member_accessible<T> and (Config.transparent_member_accessible)
         { return std::move(_value).operator->(); }
 
         // Pointer overloads
         [[nodiscard]] constexpr decltype(auto) operator->() const & noexcept
-            requires std::is_pointer_v<T> and (Config.opaque_pointer_accessible)
+            requires std::is_pointer_v<T> and (Config.transparent_pointer_accessible)
         { return _value; }
 
         [[nodiscard]] constexpr decltype(auto) operator->() && noexcept
-            requires std::is_pointer_v<T> and (Config.opaque_pointer_accessible)
+            requires std::is_pointer_v<T> and (Config.transparent_pointer_accessible)
         { return std::move(_value); }
 
         [[nodiscard]] constexpr decltype(auto) operator->() const && noexcept
-            requires std::is_pointer_v<T> and (Config.opaque_pointer_accessible)
+            requires std::is_pointer_v<T> and (Config.transparent_pointer_accessible)
         { return std::move(_value); }
 
         // Fallback overloads

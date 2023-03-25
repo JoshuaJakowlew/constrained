@@ -61,7 +61,7 @@ namespace constrained::nullable::non_null
     };
 
     template <typename T>
-    using non_null = ct::basic_constrained_type<T*, traits<T*>, ct::configuration_point{},
+    using non_null = ct::basic_constrained_type<T*, traits<T*>, ct::configuration_point{.transparent_dereferencable = true},
         ct::neq<nullptr>
     >;
 
