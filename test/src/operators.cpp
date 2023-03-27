@@ -101,7 +101,7 @@ TEST_SUITE("Operators")
         CHECK(implicit_t{implicit_t::trait_type::null} == false);
         CHECK(*implicit_t{implicit_t::trait_type::null} == implicit_t::trait_type::null);
     }
-    TEST_CASE("operator->")
+    TEST_CASE("access and deref operators")
     {
         using flat_opaque_t = ct::basic_constrained_type<
             int,
