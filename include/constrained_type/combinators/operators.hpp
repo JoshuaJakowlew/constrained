@@ -23,8 +23,8 @@
         { \
             using combinator_tag = void; \
             [[nodiscard]] constexpr auto operator()(auto const & x) const \
-                noexcept(noexcept((apply<Args>(x) op ...))) \
-            { return (apply<Args>(x) op ...); } \
+                noexcept(noexcept((... op apply<Args>(x)))) \
+            { return (... op apply<Args>(x)); } \
         }; \
     \
         template <auto A> \
