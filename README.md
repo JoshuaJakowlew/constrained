@@ -320,7 +320,7 @@ gt<c>(x) <=> x > c(x)
 #### N-ary
 Acts like n-ary function of **Args**.
 ```c++
-gt<c1, ..., cn>(x) <=> c1(x) > ... > cn(x)
+gt<c1, ..., cn>(x) <=> (((c1(x) > c2(x)) > ...) > cn(x))
 ```
 
 #### C++ operators for operator combinators
