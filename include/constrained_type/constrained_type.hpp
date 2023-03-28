@@ -197,7 +197,7 @@ namespace ct
             and noexcept(check())
         )
             requires std::is_constructible_v<T, Args...>
-            : _value{std::forward<Args>(args)...}
+            : _value(std::forward<Args>(args)...)
         { check(); }
 
         basic_constrained_type(basic_constrained_type const & other) noexcept(std::is_nothrow_copy_constructible_v<T>)
